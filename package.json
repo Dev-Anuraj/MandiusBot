@@ -1,0 +1,22 @@
+{
+  "name": "telegram-report-bot",
+  "version": "1.0.0",
+  "description": "A Telegram bot to generate reports for illegal content, channels, or bots.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "report",
+    "nodejs",
+    "telegraf"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "telegraf": "^4.16.0"
+  }
+}
