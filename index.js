@@ -2,15 +2,23 @@
 require('dotenv').config(); // Load environment variables from .env file
 
 const { Telegraf, session, Scenes, Markup } = require('telegraf');
+const url = require('url'); // Import the URL module to parse the webhook URL
 
 // Get your bot token from environment variables
 const BOT_TOKEN = process.env.BOT_TOKEN;
 // Render provides a PORT environment variable for web services
 const PORT = process.env.PORT || 3000; // Default to 3000 for local development
-const WEBHOOK_URL = process.env.WEBHOOK_URL; // Render will provide this or you construct it from RENDER_EXTERNAL_HOSTNAME
+// WEBHOOK_URL must be explicitly set in Render env, e.g., https://your-service-name.onrender.com/bot<YOUR_BOT_TOKEN>
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 if (!BOT_TOKEN) {
     console.error('BOT_TOKEN environment variable not set. Please set it in your .env file or Render environment variables.');
+    process.exit(1);
+}
+
+if (!WEBHOOK_URL && process.env.NODE_ENV === 'production') {
+    console.error('WEBHOOK_URL environment variable not set. This is required for production deployment on Render.');
+    console.error('Please set WEBHOOK_URL to your Render service URL + /bot<YOUR_BOT_TOKEN>');
     process.exit(1);
 }
 
@@ -166,18 +174,27 @@ bot.on('message', (ctx) => ctx.reply("I didn't understand that. Please use /star
 // Start the bot using webhooks for Render deployment
 if (process.env.NODE_ENV === 'production') {
     // For Render, we need to explicitly set the webhook
-    // Render provides RENDER_EXTERNAL_HOSTNAME, which is the public URL of your service
-    const webhookPath = `/bot${BOT_TOKEN}`; // A unique path for your webhook
-    const webhookUrl = WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}${webhookPath}`;
+    // WEBHOOK_URL must be set in Render environment variables, e.g., https://your-service-name.onrender.com/bot<YOUR_BOT_TOKEN>
+    const parsedUrl = url.parse(WEBHOOK_URL);
+    const webhookPath = parsedUrl.pathname; // Extract the path from the provided WEBHOOK_URL
 
-    bot.telegram.setWebhook(webhookUrl)
+    console.log(`Attempting to set webhook to: ${WEBHOOK_URL}`);
+    console.log(`Bot will listen on path: ${webhookPath} and port: ${PORT}`);
+
+    bot.telegram.setWebhook(WEBHOOK_URL)
         .then(() => {
-            console.log(`Webhook set to: ${webhookUrl}`);
+            console.log(`Webhook successfully set to: ${WEBHOOK_URL}`);
             // Start the webhook listener
+            // Telegraf will create an HTTP server and listen on the provided PORT
             bot.startWebhook(webhookPath, null, PORT);
-            console.log(`Bot listening on port ${PORT}`);
+            console.log(`Bot webhook listener started on port ${PORT}`);
         })
-        .catch(err => console.error('Error setting webhook:', err));
+        .catch(err => {
+            console.error('Error setting or starting webhook:', err.message);
+            // Log the full error object for more details
+            console.error(err);
+            process.exit(1); // Exit to indicate a critical error
+        });
 } else {
     // For local development, use long polling
     bot.launch();
