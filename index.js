@@ -5,6 +5,9 @@ const { Telegraf, session, Scenes, Markup } = require('telegraf');
 
 // Get your bot token from environment variables
 const BOT_TOKEN = process.env.BOT_TOKEN;
+// Render provides a PORT environment variable for web services
+const PORT = process.env.PORT || 3000; // Default to 3000 for local development
+const WEBHOOK_URL = process.env.WEBHOOK_URL; // Render will provide this or you construct it from RENDER_EXTERNAL_HOSTNAME
 
 if (!BOT_TOKEN) {
     console.error('BOT_TOKEN environment variable not set. Please set it in your .env file or Render environment variables.');
@@ -159,10 +162,30 @@ bot.command('cancel', async (ctx) => {
 // Fallback for unhandled messages
 bot.on('message', (ctx) => ctx.reply("I didn't understand that. Please use /start, /help, or /report."));
 
-// Start the bot
-bot.launch();
 
-console.log('Bot started. Listening for updates...');
+// Start the bot using webhooks for Render deployment
+if (process.env.NODE_ENV === 'production') {
+    // For Render, we need to explicitly set the webhook
+    // Render provides RENDER_EXTERNAL_HOSTNAME, which is the public URL of your service
+    const webhookPath = `/bot${BOT_TOKEN}`; // A unique path for your webhook
+    const webhookUrl = WEBHOOK_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}${webhookPath}`;
+
+    bot.telegram.setWebhook(webhookUrl)
+        .then(() => {
+            console.log(`Webhook set to: ${webhookUrl}`);
+            // Start the webhook listener
+            bot.startWebhook(webhookPath, null, PORT);
+            console.log(`Bot listening on port ${PORT}`);
+        })
+        .catch(err => console.error('Error setting webhook:', err));
+} else {
+    // For local development, use long polling
+    bot.launch();
+    console.log('Bot started in long polling mode for local development.');
+}
+
+
+console.log('Bot initialization complete.');
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
