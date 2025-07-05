@@ -1,7 +1,7 @@
 {
   "name": "telegram-report-bot",
   "version": "1.0.0",
-  "description": "A Telegram bot to generate reports for illegal content, channels, or bots.",
+  "description": "A Telegram bot to generate reports and manage channels.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -11,9 +11,10 @@
     "bot",
     "report",
     "nodejs",
-    "telegraf"
+    "telegraf",
+    "admin"
   ],
-  "author": "Your Name",
+  "author": "Mandius Report Bot",
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.5",
